@@ -2,12 +2,12 @@
 
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
-import os
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,28 +21,46 @@ HTML_FILE = BACKEND_DIR / "templates" / "sukl-alert-email-real-data.html"
 ECOMAIL_URL = "https://api2.ecomailapp.cz/transactional/send-message"
 
 
-def main() -> None:
-    if not ENV_PATH.is_file():
-        logger.error("config/.env not found. Create it with ECOMAIL_API_KEY.")
-        sys.exit(1)
+def load_config(env_path: Path = ENV_PATH) -> str:
+    """Load .env (if exists) and return the ECOMAIL_API_KEY.
 
-    load_dotenv(ENV_PATH)
+    The .env file is optional — the API key can also be set as an
+    environment variable directly (e.g. via ``docker run -e``).
+
+    Raises:
+        ValueError: If ECOMAIL_API_KEY is not set.
+    """
+    if env_path.is_file():
+        load_dotenv(env_path)
+        logger.info("Loaded .env from %s", env_path)
+
     api_key = os.getenv("ECOMAIL_API_KEY")
-
     if not api_key:
-        logger.error("ECOMAIL_API_KEY is not set in config/.env.")
-        sys.exit(1)
+        raise ValueError("ECOMAIL_API_KEY is not set.")
+    return api_key
 
-    if not HTML_FILE.is_file():
-        logger.error("HTML template not found: %s", HTML_FILE)
-        sys.exit(1)
 
-    html_content = HTML_FILE.read_text(encoding="utf-8")
-    logger.info("Loaded HTML template (%d chars).", len(html_content))
+def load_template(template_path: Path = HTML_FILE) -> str:
+    """Read and return the HTML email template.
 
-    payload = {
+    Raises:
+        FileNotFoundError: If the template file does not exist.
+    """
+    if not template_path.is_file():
+        raise FileNotFoundError(f"HTML template not found: {template_path}")
+    html = template_path.read_text(encoding="utf-8")
+    logger.info("Loaded HTML template (%d chars).", len(html))
+    return html
+
+
+def build_payload(html_content: str) -> dict:
+    """Build the Ecomail transactional email payload."""
+    return {
         "message": {
-            "subject": "⚠️ MAiSIGNAL: Výpadek LP – LYRICA (Pregabalin)",
+            "subject": (
+                "\u26a0\ufe0f MAiSIGNAL: V\u00fdpadek LP"
+                " \u2013 LYRICA (Pregabalin)"
+            ),
             "from_name": "MAiSIGNAL Alerts",
             "from_email": "alerts@mailing.oaks.cz",
             "reply_to": "noreply@mailing.oaks.cz",
@@ -66,9 +84,19 @@ def main() -> None:
         }
     }
 
-    logger.info("Sending alert via Ecomail API...")
+
+def send_alert(
+    payload: dict,
+    api_key: str,
+    url: str = ECOMAIL_URL,
+) -> requests.Response:
+    """POST the payload to the Ecomail transactional API.
+
+    Returns:
+        The :class:`requests.Response` object.
+    """
     response = requests.post(
-        ECOMAIL_URL,
+        url,
         headers={
             "Content-Type": "application/json",
             "key": api_key,
@@ -76,6 +104,31 @@ def main() -> None:
         data=json.dumps(payload),
         timeout=30,
     )
+    return response
+
+
+def main() -> None:
+    """Orchestrate config loading, template reading, and alert sending."""
+    try:
+        api_key = load_config()
+    except ValueError as exc:
+        logger.error(str(exc))
+        sys.exit(1)
+
+    try:
+        html_content = load_template()
+    except FileNotFoundError as exc:
+        logger.error(str(exc))
+        sys.exit(1)
+
+    payload = build_payload(html_content)
+    logger.info("Sending alert via Ecomail API...")
+
+    try:
+        response = send_alert(payload, api_key)
+    except requests.RequestException as exc:
+        logger.error("Network error: %s", exc)
+        sys.exit(1)
 
     logger.info("Response status: %d", response.status_code)
     logger.info("Response body: %s", response.text)
