@@ -5,6 +5,8 @@ import logging
 
 import requests
 
+from maisignal.domain.models import SendResult
+
 logger = logging.getLogger(__name__)
 
 
@@ -15,11 +17,11 @@ class EcomailSender:
         self._api_key = api_key
         self._url = url
 
-    def send(self, payload: dict) -> bool:
+    def send(self, payload: dict) -> SendResult:
         """POST the payload to the Ecomail transactional API.
 
         Returns:
-            True if the API responded with a success status, False otherwise.
+            SendResult with success flag and raw response text.
 
         Raises:
             requests.RequestException: On network-level errors.
@@ -40,6 +42,6 @@ class EcomailSender:
                 response.status_code,
                 response.text,
             )
-            return False
+            return SendResult(success=False, response_text=response.text)
 
-        return True
+        return SendResult(success=True, response_text=response.text)

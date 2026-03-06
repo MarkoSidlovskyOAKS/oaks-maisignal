@@ -5,10 +5,14 @@ import os
 import sys
 from pathlib import Path
 
+import snowflake.connector
 from dotenv import load_dotenv
 
 from maisignal.adapters.ecomail_sender import EcomailSender
 from maisignal.adapters.file_template_loader import FileTemplateLoader
+from maisignal.adapters.snowflake_notification_logger import (
+    SnowflakeNotificationLogger,
+)
 from maisignal.adapters.snowflake_repository import SnowflakeRecipientRepository
 from maisignal.domain.alert_service import AlertService
 
@@ -71,17 +75,20 @@ def main() -> None:
         logger.error(str(exc))
         sys.exit(1)
 
-    repo = SnowflakeRecipientRepository(sf_config)
-    loader = FileTemplateLoader(HTML_FILE)
-    sender = EcomailSender(api_key, ECOMAIL_URL)
-
-    service = AlertService(repo, loader, sender)
-
+    conn = snowflake.connector.connect(**sf_config)
     try:
+        repo = SnowflakeRecipientRepository(conn)
+        loader = FileTemplateLoader(HTML_FILE)
+        sender = EcomailSender(api_key, ECOMAIL_URL)
+        notification_logger = SnowflakeNotificationLogger(conn)
+
+        service = AlertService(repo, loader, sender, notification_logger)
         service.send_alerts()
     except (RuntimeError, FileNotFoundError) as exc:
         logger.error(str(exc))
         sys.exit(1)
+    finally:
+        conn.close()
 
 
 if __name__ == "__main__":
