@@ -1,0 +1,3 @@
+# Environment variables / secrets
+config/.env
+.env
