@@ -66,5 +66,5 @@ variable "container_image_tag" {
 variable "rotation_schedule_days" {
   description = "Number of days between automatic Snowflake password rotations."
   type        = number
-  default     = 90
+  default     = 30
 }

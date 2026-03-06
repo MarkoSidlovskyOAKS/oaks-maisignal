@@ -80,8 +80,31 @@ resource "aws_iam_role_policy" "lambda_rotate" {
         Effect = "Allow"
         Action = [
           "ec2:CreateNetworkInterface",
-          "ec2:DescribeNetworkInterfaces",
           "ec2:DeleteNetworkInterface",
+        ]
+        Resource = concat(
+          [for s in aws_subnet.private : s.arn],
+          [
+            aws_security_group.ecs_task.arn,
+            "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:network-interface/*",
+          ]
+        )
+      },
+      {
+        Effect   = "Allow"
+        Action   = "ec2:DescribeNetworkInterfaces"
+        Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "sqs:SendMessage"
+        Resource = aws_sqs_queue.lambda_rotate_dlq.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "xray:PutTraceSegments",
+          "xray:PutTelemetryRecords",
         ]
         Resource = "*"
       },
@@ -89,15 +112,32 @@ resource "aws_iam_role_policy" "lambda_rotate" {
   })
 }
 
+resource "aws_sqs_queue" "lambda_rotate_dlq" {
+  name              = "${local.prefix}-rotate-dlq"
+  kms_master_key_id = aws_kms_key.this.id
+
+  tags = { Name = "${local.prefix}-rotate-dlq" }
+}
+
 resource "aws_lambda_function" "rotate_snowflake_password" {
-  function_name    = "${local.prefix}-rotate-snowflake-password"
-  role             = aws_iam_role.lambda_rotate.arn
-  handler          = "rotate_snowflake_password.lambda_handler"
-  runtime          = "python3.12"
-  timeout          = 60
-  memory_size      = 256
-  filename         = data.archive_file.rotate_lambda.output_path
-  source_code_hash = data.archive_file.rotate_lambda.output_base64sha256
+  #checkov:skip=CKV_AWS_272:Code signing is not required for internal rotation Lambda
+  function_name                  = "${local.prefix}-rotate-snowflake-password"
+  role                           = aws_iam_role.lambda_rotate.arn
+  handler                        = "rotate_snowflake_password.lambda_handler"
+  runtime                        = "python3.12"
+  timeout                        = 60
+  memory_size                    = 256
+  reserved_concurrent_executions = 1
+  filename                       = data.archive_file.rotate_lambda.output_path
+  source_code_hash               = data.archive_file.rotate_lambda.output_base64sha256
+
+  tracing_config {
+    mode = "Active"
+  }
+
+  dead_letter_config {
+    target_arn = aws_sqs_queue.lambda_rotate_dlq.arn
+  }
 
   vpc_config {
     subnet_ids         = aws_subnet.private[*].id
