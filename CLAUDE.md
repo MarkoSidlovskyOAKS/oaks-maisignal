@@ -11,7 +11,7 @@ MAiSIGNAL is a pharmaceutical market intelligence alert system by OAKS Consultin
 This is a monorepo with three top-level components:
 
 - **`snowflake/`** — Snowflake SQL init scripts, L0 tables, seed data, and a SnowSQL runner. Linted with SQLFluff (dialect: `snowflake`).
-- **`backend/`** — Python application that sends transactional email alerts via Ecomail's REST API (`POST /transactional/send-message`). Refactored into four testable functions (`load_config`, `load_template`, `build_payload`, `send_alert`). Tested with pytest (98% coverage). Dockerized with a pinned base image and non-root user.
+- **`backend/`** — Python application that sends transactional email alerts via Ecomail's REST API (`POST /transactional/send-message`). Uses hexagonal architecture (`src/maisignal/`) with ports (protocols), adapters (Snowflake, file system, Ecomail API), and a domain service (`AlertService`). Entry point: `python -m maisignal`. Tested with pytest (99% coverage). Dockerized with a pinned base image and non-root user.
 - **`terraform/`** — AWS infrastructure provisioning (ECR, IAM) using Terraform with S3 remote state backend.
 
 ## Key Commands
@@ -23,7 +23,7 @@ pip install -r requirements.txt          # production
 pip install -r requirements-dev.txt      # dev (pytest, ruff)
 
 # Backend — send an alert email (requires valid Ecomail API key)
-cd backend && python src/send_maisignal_alert.py
+cd backend && python -m maisignal
 
 # Backend — run tests with coverage
 cd backend && pytest --cov=src --cov-report=term-missing

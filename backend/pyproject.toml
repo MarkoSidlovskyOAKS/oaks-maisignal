@@ -7,7 +7,7 @@ src = ["src", "tests"]
 select = ["E", "F", "W", "I"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["send_maisignal_alert"]
+known-first-party = ["maisignal"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
