@@ -1,0 +1,1 @@
+"""MAiSIGNAL domain layer."""

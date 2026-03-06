@@ -2,6 +2,8 @@
 
 import pytest
 
+from maisignal.domain.models import Recipient
+
 
 @pytest.fixture()
 def sample_html():
@@ -16,8 +18,14 @@ def sample_api_key():
 
 
 @pytest.fixture()
-def sample_payload(sample_html):
-    """Pre-built payload for testing."""
-    from send_maisignal_alert import build_payload
+def sample_recipient():
+    """Sample Recipient for testing."""
+    return Recipient(email="test@example.com", name="Test User")
 
-    return build_payload(sample_html)
+
+@pytest.fixture()
+def sample_payload(sample_html, sample_recipient):
+    """Pre-built payload for testing."""
+    from maisignal.domain.alert_service import build_payload
+
+    return build_payload(sample_html, sample_recipient)

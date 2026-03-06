@@ -8,9 +8,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/ ./src/
 COPY templates/ ./templates/
 
+ENV PYTHONPATH=/app/src
+
 RUN groupadd --system appgroup && \
     useradd --system --gid appgroup --no-create-home appuser
 
 USER appuser
 
-ENTRYPOINT ["python", "src/send_maisignal_alert.py"]
+ENTRYPOINT ["python", "-m", "maisignal"]
