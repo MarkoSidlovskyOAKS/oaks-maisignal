@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-03-06
+
+### Added
+- Backend Dockerfile with pinned `python:3.12-slim` digest and non-root user.
+- Backend `.dockerignore` to exclude secrets, tests, and caches from image.
+- Backend `pyproject.toml` with Ruff, pytest, and coverage configuration.
+- Backend `requirements-dev.txt` for dev dependencies (pytest, pytest-cov, ruff).
+- Backend test suite with 19 test cases (98% coverage).
+
+### Changed
+- Refactored `send_maisignal_alert.py` from monolithic `main()` into four testable functions: `load_config`, `load_template`, `build_payload`, `send_alert`.
+- Made `.env` file optional in `load_config` — API key can be injected via environment variable for Docker compatibility.
+
 ## [0.3.0] - 2026-03-06
 
 ### Added
