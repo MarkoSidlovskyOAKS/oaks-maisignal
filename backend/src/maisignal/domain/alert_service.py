@@ -83,9 +83,7 @@ class AlertService:
             try:
                 result = self._email_sender.send(payload)
             except Exception as exc:
-                logger.error(
-                    "Network error sending to %s: %s", recipient.email, exc
-                )
+                logger.error("Network error sending alert: %s", exc)
                 self._log_notification(
                     recipient, subject, "failed", str(exc)
                 )
@@ -93,12 +91,12 @@ class AlertService:
                 continue
 
             if result.success:
-                logger.info("Alert sent to %s.", recipient.email)
+                logger.info("Alert sent successfully.")
                 self._log_notification(
                     recipient, subject, "sent", result.response_text
                 )
             else:
-                logger.error("Failed to send alert to %s.", recipient.email)
+                logger.error("Failed to send alert.")
                 self._log_notification(
                     recipient, subject, "failed", result.response_text
                 )

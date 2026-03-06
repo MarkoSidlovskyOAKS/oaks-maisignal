@@ -43,6 +43,4 @@ class SnowflakeNotificationLogger:
                 ),
             )
         except Exception:
-            logger.exception(
-                "Failed to log notification for %s", user_email
-            )
+            logger.exception("Failed to log notification.")
