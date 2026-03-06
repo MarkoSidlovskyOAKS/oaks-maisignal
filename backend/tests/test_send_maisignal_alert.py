@@ -1,6 +1,5 @@
 """Tests for send_maisignal_alert module."""
 
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -13,7 +12,6 @@ from send_maisignal_alert import (
     main,
     send_alert,
 )
-
 
 # ── load_config ──────────────────────────────────────────────────────
 

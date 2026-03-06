@@ -1,9 +1,13 @@
 [tool.ruff]
 line-length = 88
 target-version = "py312"
+src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["send_maisignal_alert"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
