@@ -17,7 +17,10 @@ MAiSIGNAL monitors Czech drug regulatory events — specifically SUKL drug unava
 oaks-maisignal/
 ├── snowflake/          # Snowflake SQL init & data layer
 ├── backend/            # Python alert sender application
-├── terraform/          # AWS infrastructure (ECR, IAM)
+├── terraform/          # AWS infrastructure (ECR, ECS, VPC, Lambda)
+├── .github/
+│   ├── workflows/      # CI/CD pipelines
+│   └── dependabot.yml  # Automated dependency updates
 ├── CLAUDE.md
 ├── CHANGELOG.md
 └── LICENSE
@@ -25,9 +28,9 @@ oaks-maisignal/
 
 | Component | Description | Details |
 |-----------|-------------|---------|
-| [`snowflake/`](snowflake/README.md) | Snowflake database init scripts and L0 raw table definitions | SQLFluff linted |
-| [`backend/`](backend/README.md) | Python application — sends transactional email alerts via Ecomail API | pip + virtualenv |
-| [`terraform/`](terraform/README.md) | AWS infrastructure provisioning (ECR, IAM) with S3 remote state | Terraform >= 1.5 |
+| [`snowflake/`](snowflake/README.md) | Snowflake database init scripts, L0 tables, and per-environment schemas | SQLFluff linted |
+| [`backend/`](backend/README.md) | Python application — hexagonal architecture, sends alerts via Ecomail API | 99% test coverage |
+| [`terraform/`](terraform/README.md) | AWS infrastructure (VPC, ECS Fargate, ECR, Lambda, Secrets Manager, KMS) | Terraform >= 1.5 |
 
 ## Quick Start
 
@@ -37,10 +40,21 @@ cd backend
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 echo 'ECOMAIL_API_KEY=your-key' > config/.env
-python src/send_maisignal_alert.py
+python -m maisignal
 ```
 
 See each component's README for detailed setup instructions.
+
+## CI/CD & Security
+
+| Tool | Purpose |
+|------|---------|
+| **GitHub Actions** | Backend CI, deploy to dev/prod, Trivy scan, Checkov scan |
+| **Dependabot** | Automated dependency updates (pip, Terraform, Actions, Docker) |
+| **CodeQL** | Code scanning and code quality analysis |
+| **Secret scanning** | Detects accidentally committed secrets (with push protection) |
+| **Trivy** | Container and code vulnerability scanning |
+| **Checkov** | Terraform infrastructure-as-code security scanning |
 
 ## Domain Glossary
 

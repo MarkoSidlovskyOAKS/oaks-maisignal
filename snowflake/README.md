@@ -2,6 +2,14 @@
 
 Snowflake SQL scripts for the MAiSIGNAL data infrastructure.
 
+## Schema Architecture
+
+| Schema | Purpose |
+|--------|---------|
+| `l0` | Shared reference data and audit tables (SUKL, UZIS, notification log) |
+| `l0_dev` | Dev environment client data (recipients, brands, portfolio) |
+| `l0_prod` | Prod environment client data (recipients, brands, portfolio) |
+
 ## Data Layer Architecture
 
 | Layer | Directory | Purpose |
@@ -46,20 +54,28 @@ Edit `config/.env` with your values. This file is gitignored — never commit it
 ./run.sh init/
 ```
 
-This creates the database, schema (`l0`), warehouse (`maisignal_wh`), and service user in order.
+This creates the database, schemas (`l0`, `l0_dev`, `l0_prod`), warehouse (`maisignal_wh`), and service user in order.
 
 **Important:** Edit `init/04_create_user.sql` and replace `<strong_password>` with a secure password before executing.
 
 ### 3. Create L0 tables
 
 ```bash
+# Shared tables (notification_log, SUKL, UZIS)
 ./run.sh L0/
+
+# Per-environment client tables (client_brands, client_portfolio)
+./run.sh L0/env/
 ```
 
 ### 4. Load seed data
 
 ```bash
+# Shared seed data (SUKL reports, UZIS reimbursement)
 ./run.sh seed/
+
+# Dev environment client data
+./run.sh seed/env/
 ```
 
 ## Runner Script
@@ -78,7 +94,9 @@ This creates the database, schema (`l0`), warehouse (`maisignal_wh`), and servic
 
 ## Tables
 
-### `maisignal.l0.posledni_platne_hlaseni`
+### Shared tables (`l0`)
+
+#### `maisignal.l0.posledni_platne_hlaseni`
 
 SUKL latest valid drug unavailability reports. Source: [SUKL Open Data](https://opendata.sukl.cz/).
 
@@ -97,7 +115,7 @@ SUKL latest valid drug unavailability reports. Source: [SUKL Open Data](https://
 | `duvod_preruseni_ukonceni` | `VARCHAR` | Reason for interruption/termination |
 | `termin_obnoveni` | `DATE` | Expected recovery date |
 
-### `maisignal.l0.uzis_erecept`
+#### `maisignal.l0.uzis_erecept`
 
 UZIS eRECEPT reimbursement data for prescriber and pharmacy analysis.
 
@@ -111,27 +129,7 @@ UZIS eRECEPT reimbursement data for prescriber and pharmacy analysis.
 | `kvartal` | `VARCHAR` | Quarter (e.g. Q3) |
 | `rok` | `NUMBER` | Year |
 
-### `maisignal.l0.client_portfolio`
-
-Client-to-ATC code mapping for alert targeting.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `user_email` | `VARCHAR NOT NULL` | Client email address |
-| `company_name` | `VARCHAR NOT NULL` | Company name |
-| `atc_portfolio` | `VARCHAR NOT NULL` | ATC code of interest |
-
-### `maisignal.l0.client_brands`
-
-Client-to-brand mapping for alert personalization.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `user_email` | `VARCHAR NOT NULL` | Client email address |
-| `company_name` | `VARCHAR NOT NULL` | Company name |
-| `brand` | `VARCHAR NOT NULL` | Brand name |
-
-### `maisignal.l0.notification_log`
+#### `maisignal.l0.notification_log`
 
 Tracks all email alerts sent by the MAiSIGNAL system.
 
@@ -145,6 +143,28 @@ Tracks all email alerts sent by the MAiSIGNAL system.
 | `sent_at` | `TIMESTAMP_NTZ` | Timestamp (default: current) |
 | `status` | `VARCHAR NOT NULL` | Delivery status |
 | `ecomail_response` | `VARCHAR` | Raw API response from Ecomail |
+
+### Per-environment tables (`l0_dev` / `l0_prod`)
+
+#### `client_portfolio`
+
+Client-to-ATC code mapping for alert targeting.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `user_email` | `VARCHAR NOT NULL` | Client email address |
+| `company_name` | `VARCHAR NOT NULL` | Company name |
+| `atc_portfolio` | `VARCHAR NOT NULL` | ATC code of interest |
+
+#### `client_brands`
+
+Client-to-brand mapping for alert personalization.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `user_email` | `VARCHAR NOT NULL` | Client email address |
+| `company_name` | `VARCHAR NOT NULL` | Company name |
+| `brand` | `VARCHAR NOT NULL` | Brand name |
 
 ## Linting
 
