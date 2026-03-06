@@ -14,21 +14,31 @@ Snowflake SQL scripts for the MAiSIGNAL data infrastructure.
 
 Currently only L0 is implemented.
 
+## Prerequisites
+
+### Install SnowSQL
+
+```bash
+brew install --cask snowflake-snowsql
+```
+
+Verify the installation:
+
+```bash
+snowsql --version
+```
+
 ## Setup
 
 ### 1. Configure credentials
 
-Create `config/.env` with your Snowflake credentials:
+Copy the template and fill in your Snowflake credentials:
 
 ```bash
-SNOWFLAKE_ACCOUNT=your_account
-SNOWFLAKE_USER=your_user
-SNOWFLAKE_PASSWORD=your_password
-SNOWFLAKE_ROLE=ACCOUNTADMIN
-SNOWFLAKE_WAREHOUSE=maisignal_wh
+cp config/.env.example config/.env
 ```
 
-This file is gitignored — never commit it.
+Edit `config/.env` with your values. This file is gitignored — never commit it.
 
 ### 2. Run init scripts
 

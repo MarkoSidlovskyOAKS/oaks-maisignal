@@ -1,11 +1,20 @@
 """Core use case: send MAiSIGNAL email alerts."""
 
+from __future__ import annotations
+
 import logging
 
 from maisignal.domain.models import Recipient
-from maisignal.ports import EmailSender, RecipientRepository, TemplateLoader
+from maisignal.ports import (
+    EmailSender,
+    NotificationLogger,
+    RecipientRepository,
+    TemplateLoader,
+)
 
 logger = logging.getLogger(__name__)
+
+ALERT_TYPE = "sukl_unavailability"
 
 
 def build_payload(html_content: str, recipient: Recipient) -> dict:
@@ -48,10 +57,12 @@ class AlertService:
         recipient_repo: RecipientRepository,
         template_loader: TemplateLoader,
         email_sender: EmailSender,
+        notification_logger: NotificationLogger | None = None,
     ) -> None:
         self._recipient_repo = recipient_repo
         self._template_loader = template_loader
         self._email_sender = email_sender
+        self._notification_logger = notification_logger
 
     def send_alerts(self) -> None:
         """Load template, fetch recipients, build payloads, and send emails.
@@ -67,19 +78,30 @@ class AlertService:
 
         for recipient in recipients:
             payload = build_payload(html_content, recipient)
+            subject = payload["message"]["subject"]
+
             try:
-                success = self._email_sender.send(payload)
+                result = self._email_sender.send(payload)
             except Exception as exc:
                 logger.error(
                     "Network error sending to %s: %s", recipient.email, exc
                 )
+                self._log_notification(
+                    recipient, subject, "failed", str(exc)
+                )
                 failures += 1
                 continue
 
-            if success:
+            if result.success:
                 logger.info("Alert sent to %s.", recipient.email)
+                self._log_notification(
+                    recipient, subject, "sent", result.response_text
+                )
             else:
                 logger.error("Failed to send alert to %s.", recipient.email)
+                self._log_notification(
+                    recipient, subject, "failed", result.response_text
+                )
                 failures += 1
 
         if failures:
@@ -88,3 +110,21 @@ class AlertService:
             )
 
         logger.info("All %d alerts sent successfully.", len(recipients))
+
+    def _log_notification(
+        self,
+        recipient: Recipient,
+        subject: str,
+        status: str,
+        ecomail_response: str,
+    ) -> None:
+        """Delegate to notification logger if one is configured."""
+        if self._notification_logger is not None:
+            self._notification_logger.log(
+                user_email=recipient.email,
+                company_name=recipient.name,
+                alert_type=ALERT_TYPE,
+                subject=subject,
+                status=status,
+                ecomail_response=ecomail_response,
+            )

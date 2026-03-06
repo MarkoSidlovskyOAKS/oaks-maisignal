@@ -76,25 +76,32 @@ class TestLoadConfig:
 
 class TestMain:
     @patch("maisignal.__main__.AlertService")
+    @patch("maisignal.__main__.SnowflakeNotificationLogger")
     @patch("maisignal.__main__.EcomailSender")
     @patch("maisignal.__main__.FileTemplateLoader")
     @patch("maisignal.__main__.SnowflakeRecipientRepository")
+    @patch("maisignal.__main__.snowflake.connector.connect")
     @patch("maisignal.__main__.load_config")
     def test_success(
-        self, mock_config, mock_repo_cls, mock_loader_cls, mock_sender_cls,
-        mock_service_cls,
+        self, mock_config, mock_connect, mock_repo_cls, mock_loader_cls,
+        mock_sender_cls, mock_notif_cls, mock_service_cls,
     ):
         mock_config.return_value = ("test-key", {"account": "acct"})
+        mock_conn = MagicMock()
+        mock_connect.return_value = mock_conn
         mock_service = MagicMock()
         mock_service_cls.return_value = mock_service
 
         main()
 
         mock_config.assert_called_once()
-        mock_repo_cls.assert_called_once()
+        mock_connect.assert_called_once_with(account="acct")
+        mock_repo_cls.assert_called_once_with(mock_conn)
         mock_loader_cls.assert_called_once()
         mock_sender_cls.assert_called_once()
+        mock_notif_cls.assert_called_once_with(mock_conn)
         mock_service.send_alerts.assert_called_once()
+        mock_conn.close.assert_called_once()
 
     @patch("maisignal.__main__.load_config")
     def test_config_error_exits(self, mock_config):
@@ -105,15 +112,19 @@ class TestMain:
         assert exc_info.value.code == 1
 
     @patch("maisignal.__main__.AlertService")
+    @patch("maisignal.__main__.SnowflakeNotificationLogger")
     @patch("maisignal.__main__.EcomailSender")
     @patch("maisignal.__main__.FileTemplateLoader")
     @patch("maisignal.__main__.SnowflakeRecipientRepository")
+    @patch("maisignal.__main__.snowflake.connector.connect")
     @patch("maisignal.__main__.load_config")
     def test_runtime_error_exits(
-        self, mock_config, mock_repo_cls, mock_loader_cls, mock_sender_cls,
-        mock_service_cls,
+        self, mock_config, mock_connect, mock_repo_cls, mock_loader_cls,
+        mock_sender_cls, mock_notif_cls, mock_service_cls,
     ):
         mock_config.return_value = ("test-key", {"account": "acct"})
+        mock_conn = MagicMock()
+        mock_connect.return_value = mock_conn
         mock_service = MagicMock()
         mock_service.send_alerts.side_effect = RuntimeError("1 of 1 sends failed.")
         mock_service_cls.return_value = mock_service
@@ -121,17 +132,22 @@ class TestMain:
         with pytest.raises(SystemExit) as exc_info:
             main()
         assert exc_info.value.code == 1
+        mock_conn.close.assert_called_once()
 
     @patch("maisignal.__main__.AlertService")
+    @patch("maisignal.__main__.SnowflakeNotificationLogger")
     @patch("maisignal.__main__.EcomailSender")
     @patch("maisignal.__main__.FileTemplateLoader")
     @patch("maisignal.__main__.SnowflakeRecipientRepository")
+    @patch("maisignal.__main__.snowflake.connector.connect")
     @patch("maisignal.__main__.load_config")
     def test_file_not_found_exits(
-        self, mock_config, mock_repo_cls, mock_loader_cls, mock_sender_cls,
-        mock_service_cls,
+        self, mock_config, mock_connect, mock_repo_cls, mock_loader_cls,
+        mock_sender_cls, mock_notif_cls, mock_service_cls,
     ):
         mock_config.return_value = ("test-key", {"account": "acct"})
+        mock_conn = MagicMock()
+        mock_connect.return_value = mock_conn
         mock_service = MagicMock()
         mock_service.send_alerts.side_effect = FileNotFoundError("Template missing")
         mock_service_cls.return_value = mock_service
@@ -139,3 +155,4 @@ class TestMain:
         with pytest.raises(SystemExit) as exc_info:
             main()
         assert exc_info.value.code == 1
+        mock_conn.close.assert_called_once()

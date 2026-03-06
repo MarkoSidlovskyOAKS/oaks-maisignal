@@ -2,7 +2,7 @@
 
 import logging
 
-import snowflake.connector
+from snowflake.connector import SnowflakeConnection
 
 from maisignal.domain.models import Recipient
 
@@ -17,22 +17,18 @@ RECIPIENTS_QUERY = (
 class SnowflakeRecipientRepository:
     """Fetches recipients from the Snowflake client_portfolio table."""
 
-    def __init__(self, sf_config: dict) -> None:
-        self._sf_config = sf_config
+    def __init__(self, connection: SnowflakeConnection) -> None:
+        self._conn = connection
 
     def get_all(self) -> list[Recipient]:
-        """Connect to Snowflake, query recipients, and return them.
+        """Query recipients and return them.
 
         Raises:
             RuntimeError: If no recipients are found.
         """
-        conn = snowflake.connector.connect(**self._sf_config)
-        try:
-            cur = conn.cursor()
-            cur.execute(RECIPIENTS_QUERY)
-            rows = cur.fetchall()
-        finally:
-            conn.close()
+        cur = self._conn.cursor()
+        cur.execute(RECIPIENTS_QUERY)
+        rows = cur.fetchall()
 
         if not rows:
             raise RuntimeError("No recipients found in client_portfolio.")
