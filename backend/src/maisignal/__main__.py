@@ -82,7 +82,7 @@ def main() -> None:
         repo = SnowflakeRecipientRepository(conn, schema=schema)
         loader = FileTemplateLoader(HTML_FILE)
         sender = EcomailSender(api_key, ECOMAIL_URL)
-        notification_logger = SnowflakeNotificationLogger(conn)
+        notification_logger = SnowflakeNotificationLogger(conn, schema=schema)
 
         service = AlertService(repo, loader, sender, notification_logger)
         service.send_alerts()

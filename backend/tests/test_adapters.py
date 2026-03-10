@@ -184,6 +184,48 @@ class TestSnowflakeNotificationLogger:
             '{"status": "ok"}',
         )
 
+    def test_default_schema_uses_l0(self):
+        mock_cursor = MagicMock()
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        notif_logger = SnowflakeNotificationLogger(mock_conn)
+        notif_logger.log(
+            user_email="a@example.com",
+            company_name="A",
+            alert_type="sukl_unavailability",
+            subject="Test",
+            status="sent",
+            ecomail_response="",
+        )
+
+        query = mock_cursor.execute.call_args[0][0]
+        assert "maisignal.l0.notification_log" in query
+
+    def test_custom_schema(self):
+        mock_cursor = MagicMock()
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        notif_logger = SnowflakeNotificationLogger(mock_conn, schema="l0_dev")
+        notif_logger.log(
+            user_email="a@example.com",
+            company_name="A",
+            alert_type="sukl_unavailability",
+            subject="Test",
+            status="sent",
+            ecomail_response="",
+        )
+
+        query = mock_cursor.execute.call_args[0][0]
+        assert "maisignal.l0_dev.notification_log" in query
+
+    def test_invalid_schema_raises(self):
+        mock_conn = MagicMock()
+
+        with pytest.raises(ValueError, match="Invalid schema"):
+            SnowflakeNotificationLogger(mock_conn, schema="evil_schema")
+
     def test_swallows_errors(self):
         mock_conn = MagicMock()
         mock_conn.cursor.side_effect = Exception("Cursor failed")

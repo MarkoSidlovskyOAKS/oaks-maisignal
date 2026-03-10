@@ -99,7 +99,7 @@ class TestMain:
         mock_repo_cls.assert_called_once_with(mock_conn, schema="l0")
         mock_loader_cls.assert_called_once()
         mock_sender_cls.assert_called_once()
-        mock_notif_cls.assert_called_once_with(mock_conn)
+        mock_notif_cls.assert_called_once_with(mock_conn, schema="l0")
         mock_service.send_alerts.assert_called_once()
         mock_conn.close.assert_called_once()
 
