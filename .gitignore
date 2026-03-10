@@ -8,6 +8,7 @@ backend/venv/
 venv/
 __pycache__/
 *.pyc
+.coverage
 
 # Terraform
 terraform/.terraform/
